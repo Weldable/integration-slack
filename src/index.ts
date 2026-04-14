@@ -1,4 +1,4 @@
-import { defineIntegration, createRestHandler, IntegrationApiError } from '@weldable/integration-core'
+import { defineIntegration, createRestHandler, IntegrationApiError, fakeSlackTs, fakeId, fakeArray, fakeEmail, deriveSeed } from '@weldable/integration-core'
 
 // Slack returns HTTP 200 for all responses — the `ok` field is the real indicator
 const rest = createRestHandler({
@@ -55,6 +55,10 @@ export default defineIntegration({
         { name: 'channel', type: 'string', description: 'Channel ID the message was posted to.' },
       ],
       execute: rest({ method: 'POST', path: '/chat.postMessage', paramMapping: { channel: 'body', text: 'body' } }),
+      mockExecute: async (args, ctx) => ({
+        ts: fakeSlackTs(ctx.seed),
+        channel: String(args.channel ?? 'C0000000000'),
+      }),
     },
     {
       actionId: 'reply_to_thread',
@@ -81,6 +85,11 @@ export default defineIntegration({
         { name: 'message', type: 'object', description: 'Full message object including text, user, and ts.' },
       ],
       execute: rest({ method: 'POST', path: '/chat.postMessage', paramMapping: { channel: 'body', text: 'body', thread_ts: 'body' } }),
+      mockExecute: async (args, ctx) => ({
+        ts: fakeSlackTs(ctx.seed),
+        channel: String(args.channel ?? 'C0000000000'),
+        message: { ts: fakeSlackTs(deriveSeed(ctx.seed, 'msg')), user: fakeId(deriveSeed(ctx.seed, 'user'), 10), text: String(args.text ?? ''), type: 'message' },
+      }),
     },
     {
       actionId: 'update_message',
@@ -152,6 +161,11 @@ export default defineIntegration({
         { name: 'post_at', type: 'number', description: 'Unix timestamp when the message will be sent.' },
       ],
       execute: rest({ method: 'POST', path: '/chat.scheduleMessage', paramMapping: { channel: 'body', text: 'body', post_at: 'body' } }),
+      mockExecute: async (args, ctx) => ({
+        scheduled_message_id: fakeId(ctx.seed, 16),
+        channel: String(args.channel ?? 'C0000000000'),
+        post_at: typeof args.post_at === 'number' ? args.post_at : Math.floor(Date.now() / 1000) + 3600,
+      }),
     },
     {
       actionId: 'read_messages',
@@ -179,6 +193,16 @@ export default defineIntegration({
         { name: 'response_metadata', type: 'object', description: 'Pagination metadata including next_cursor for fetching additional messages.' },
       ],
       execute: rest({ method: 'GET', path: '/conversations.history', paramMapping: { channel: 'query', limit: 'query', oldest: 'query', latest: 'query' } }),
+      mockExecute: async (args, ctx) => ({
+        messages: fakeArray(ctx.seed, 3, (s) => ({
+          ts: fakeSlackTs(s),
+          user: `U${fakeId(deriveSeed(s, 'u'), 9)}`,
+          text: `Mock message ${s.slice(-4)}`,
+          type: 'message',
+        })),
+        has_more: false,
+        response_metadata: { next_cursor: '' },
+      }),
     },
     {
       actionId: 'read_thread',
@@ -203,6 +227,16 @@ export default defineIntegration({
         { name: 'response_metadata', type: 'object', description: 'Pagination metadata including next_cursor.' },
       ],
       execute: rest({ method: 'GET', path: '/conversations.replies', paramMapping: { channel: 'query', ts: 'query', limit: 'query' } }),
+      mockExecute: async (args, ctx) => ({
+        messages: fakeArray(ctx.seed, 3, (s) => ({
+          ts: fakeSlackTs(s),
+          user: `U${fakeId(deriveSeed(s, 'u'), 9)}`,
+          text: `Reply ${s.slice(-4)}`,
+          type: 'message',
+        })),
+        has_more: false,
+        response_metadata: { next_cursor: '' },
+      }),
     },
     // ── Reactions ─────────────────────────────────────────────
     {
@@ -290,6 +324,16 @@ export default defineIntegration({
         { name: 'response_metadata', type: 'object', description: 'Pagination metadata including next_cursor for fetching additional channels.' },
       ],
       execute: rest({ method: 'GET', path: '/conversations.list', paramMapping: { limit: 'query' } }),
+      mockExecute: async (_args, ctx) => ({
+        channels: fakeArray(ctx.seed, 4, (s) => ({
+          id: `C${fakeId(deriveSeed(s, 'c'), 9)}`,
+          name: `channel-${s.slice(-4)}`,
+          is_private: false,
+          num_members: 10,
+          topic: { value: '' },
+        })),
+        response_metadata: { next_cursor: '' },
+      }),
     },
     {
       actionId: 'get_channel_info',
@@ -480,6 +524,16 @@ export default defineIntegration({
         { name: 'response_metadata', type: 'object', description: 'Pagination metadata including next_cursor for fetching additional users.' },
       ],
       execute: rest({ method: 'GET', path: '/users.list', paramMapping: { limit: 'query', cursor: 'query' } }),
+      mockExecute: async (_args, ctx) => ({
+        members: fakeArray(ctx.seed, 3, (s) => ({
+          id: `U${fakeId(deriveSeed(s, 'u'), 9)}`,
+          name: `user-${s.slice(-4)}`,
+          real_name: `User ${s.slice(-4)}`,
+          is_bot: false,
+          profile: { email: fakeEmail(s), display_name: `user-${s.slice(-4)}`, title: '' },
+        })),
+        response_metadata: { next_cursor: '' },
+      }),
     },
     {
       actionId: 'get_user_info',
@@ -519,6 +573,14 @@ export default defineIntegration({
         { name: 'user', type: 'object', description: 'User object with id, name, real_name, and profile (email, display_name, title).' },
       ],
       execute: rest({ method: 'GET', path: '/users.lookupByEmail', paramMapping: { email: 'query' } }),
+      mockExecute: async (args, ctx) => ({
+        user: {
+          id: `U${fakeId(ctx.seed, 9)}`,
+          name: `user-${ctx.seed.slice(-4)}`,
+          real_name: `User ${ctx.seed.slice(-4)}`,
+          profile: { email: String(args.email ?? fakeEmail(ctx.seed)), display_name: `user-${ctx.seed.slice(-4)}`, title: '' },
+        },
+      }),
     },
   ],
 })
