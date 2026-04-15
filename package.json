@@ -1,6 +1,5 @@
 {
   "name": "@weldable/integration-slack",
-  "private": true,
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -14,20 +13,41 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "prepublishOnly": "tsc"
   },
   "peerDependencies": {
-    "@weldable/integration-core": "workspace:*"
+    "@weldable/integration-core": "^1.0.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "@weldable/integration-core": "^1.0.0"
   },
   "engines": {
     "node": ">=18"
   },
   "files": [
-    "dist",
-    "src"
-  ]
+    "dist"
+  ],
+  "description": "Slack messaging and channel actions for Weldable",
+  "author": "Weldable",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weldable/integration-slack.git"
+  },
+  "homepage": "https://github.com/weldable/integration-slack#readme",
+  "bugs": {
+    "url": "https://github.com/weldable/integration-slack/issues"
+  },
+  "keywords": [
+    "weldable",
+    "integration",
+    "mcp",
+    "ai",
+    "automation"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }
