@@ -17,14 +17,33 @@ npm install @weldable/integration-slack @weldable/integration-core
 ```ts
 import integration from '@weldable/integration-slack'
 
-// Pass to a Weldable-compatible host
-console.log(integration.actions.map(a => a.id))
-```
+// Post a message
+const post = integration.actions.find(a => a.id === 'slack.post_message')!
 
-## Contributing and releasing
+const result = await post.execute(
+  {
+    channel: '#deployments',
+    text: 'Release v1.2.0 deployed to production. :white_check_mark:',
+  },
+  ctx, // ActionContext from your Weldable-compatible host
+)
 
-See [CONTRIBUTING.md](https://github.com/weldable/integration-core/blob/main/CONTRIBUTING.md) in `@weldable/integration-core` for the development workflow and release process.
+// Read recent messages
+const read = integration.actions.find(a => a.id === 'slack.read_messages')!
 
-## License
+const messages = await read.execute(
+  { channel: 'C01234ABCDE', limit: 10 },
+  ctx,
+)
 
-MIT
+// Reply in a thread
+const reply = integration.actions.find(a => a.id === 'slack.reply_to_thread')!
+
+await reply.execute(
+  {
+    channel: 'C01234ABCDE',
+    thread_ts: result.ts as string,
+    text: 'Rollback plan is ready if needed.',
+  },
+  ctx,
+)
